@@ -1,7 +1,7 @@
 
-####################
-##ININITIALISATION##
-####################
+#################################################################################
+##                          ININITIALISATION                                   ##
+#################################################################################
 
 ###### installation packages necessaires ########
 list.of.packages= c("data.table", "naniar", "ggplot2", "dplyr", "tidyr", "rworldmap"
@@ -34,6 +34,9 @@ dim(data)
 colnames(data)
 head(data)
 
+#################################################################################
+#################################################################################
+#################################################################################
 
 #informations sur les features de notre table
 str(data)
@@ -60,9 +63,9 @@ str(data)
 
 
 
-###############
-##EXPLORATION##
-###############
+##############################################################################
+##                              EXPLORATION                                 ##
+##############################################################################
 
 
 #on va séparer notre df en 2; quali et numériques
@@ -194,20 +197,26 @@ bar_freq(subset(quali, is.na(condition)), "year", 13)
 #la distribution est similaire à celle de toute la pop donc non
 
 
+#################################################################################
+#################################################################################
+#################################################################################
 
 
-##################
-## RETRAITEMENT ##
-##################
+#################################################################################
+##                                RETRAITEMENT                                 ##
+#################################################################################
+
+
+###################################### NAN ######################################
 
 ######### manufacturer #########
-## Strat�gie 1 : recherche du manufacturer dans le champ "make"
+## Strategie 1 : recherche du manufacturer dans le champ "make"
 unique_manufacturers <- unique(data$manufacturer) # These are the known manufacturers
 unique_manufacturers <- unique_manufacturers[-3] # remove the NA value
 man_is_na <- data[is.na(data$manufacturer)] # Rows with manufacturer NA
 dim(man_is_na) # 25k NA
 sum(is.na(man_is_na$make)) # Seulement 18 make sont NA
-# Pour chaque ligne o� manufacturer est NA, chercher un manufacturer connu dans make
+# Pour chaque ligne ou manufacturer est NA, chercher un manufacturer connu dans make
 found_manufacturers = apply(man_is_na, 1, function(row, count){
   return <- NA
   for (pattern in unique_manufacturers){
@@ -220,13 +229,9 @@ found_manufacturers = apply(man_is_na, 1, function(row, count){
 table(found_manufacturers)
 length(found_manufacturers) - sum(is.na(found_manufacturers)) # 1441 valeurs trouv�es !
 
-## Strat�gie 2 : knn avec le champ make
+## Strategie 2 : knn avec le champ make
 
 
-
-#
-#traitement nan
-#
 
 retraitement= function(x) {
   if (is.numeric(x)) {
@@ -346,10 +351,28 @@ rm(data_new)
 rm(nums)
 rm(quali)
 
-#
-#enregistrement nouvelle table propre
-#
-write.csv(data_abe, file = "data_abe.csv")
+
+
+
+
+##################################################################################
+##                                CREATION VARIABLES                            ##
+##################################################################################
+
+
+
+
+
+
+
+##################################################################################
+##################################################################################
+##################################################################################
+
+
+
+
+
 
 
 ######################################
@@ -369,4 +392,14 @@ summary(data_abe)
 par(mfrow=c(1,1))
 m= cor(nums)
 corrplot(m)
+
+
+
+
+
+#
+#enregistrement nouvelle table propre
+#
+write.csv(data_abe, file = "data_abe.csv")
+
 
