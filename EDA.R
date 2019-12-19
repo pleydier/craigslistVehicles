@@ -5,14 +5,13 @@
 
 ###### installation packages necessaires ########
 list.of.packages= c("data.table", "naniar", "ggplot2", "dplyr", "tidyr", "rworldmap"
-                    , "corrplot"
-                    )
+                    , "corrplot", "rstudioapi")
 install.packages(list.of.packages)
 #################################################
 
-getwd()
-setwd("C:/Users/Wenceslas/Dropbox/MoSEF/cours/DATA_MINING_R/pojet_car")
-getwd()
+library(rstudioapi)
+# Set active directory to the document currently opened in RStudio
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 rm= (list=ls())
 
 library(data.table)
