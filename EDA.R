@@ -5,7 +5,7 @@
 
 ###### installation packages necessaires ########
 list.of.packages= c("data.table", "naniar", "ggplot2", "dplyr", "tidyr", "rworldmap"
-                    , "corrplot", "rstudioapi")
+                    , "corrplot", "rstudioapi", "VIM")
 install.packages(list.of.packages)
 #################################################
 
@@ -25,6 +25,7 @@ library(tidyr) #drop na
 library(rworldmap)
 #install.packages("rworldmap")
 library(corrplot)
+library(VIM)
 #install.packages("corrplot")
 
 #data= read.csv("data/craigslistVehicles.csv", na.strings= "", sep= ",")
@@ -33,13 +34,6 @@ dim(data)
 colnames(data)
 head(data)
 
-#on va dropper des variables que l'on ne compte pas exploiter (les url, id, desc)
-data$url = NULL
-data$city_url= NULL
-data$image_url= NULL
-data$desc= NULL
-data$VIN= NULL
-colnames(data)
 
 #informations sur les features de notre table
 str(data)
@@ -51,10 +45,10 @@ vis_miss(data[c(0:100000)], warn_large_data=F)
 navar= colSums(is.na(data))/nrow(data) #taux de na dans les colonnes (variable)
 navar
 
-naind= rowSums(is.na(data))/ncol(data)#taux na par individu
+naind= rowSums(is.na(data))#/ncol(data)#taux na par individu
 max(naind)
 
-
+table(naind) #TODO: Dropper les mecs qui ont trop de nan ?
 
 data= setDF(data)
 
@@ -165,7 +159,9 @@ dev.off(dev.list()["RStudioGD"]) #on nettoie les images
 plot(newmap, xlim = xlim_us, ylim = ylim_us, asp = 1)
 points(nums$long, nums$lat, col = "red", cex = .6)
 #on va garder ces limites pour nos données
-
+#TODO: Ameliorer les frontieres pour rendre la data plus propre
+# => mettre en NA les outliers
+# Reconstruire les NA en fonction de la ville
 
 
 
@@ -200,9 +196,32 @@ bar_freq(subset(quali, is.na(condition)), "year", 13)
 
 
 
-################
-##RETRAITEMENT##
-################
+##################
+## RETRAITEMENT ##
+##################
+
+######### manufacturer #########
+## Strat�gie 1 : recherche du manufacturer dans le champ "make"
+unique_manufacturers <- unique(data$manufacturer) # These are the known manufacturers
+unique_manufacturers <- unique_manufacturers[-3] # remove the NA value
+man_is_na <- data[is.na(data$manufacturer)] # Rows with manufacturer NA
+dim(man_is_na) # 25k NA
+sum(is.na(man_is_na$make)) # Seulement 18 make sont NA
+# Pour chaque ligne o� manufacturer est NA, chercher un manufacturer connu dans make
+found_manufacturers = apply(man_is_na, 1, function(row, count){
+  return <- NA
+  for (pattern in unique_manufacturers){
+    if(grepl(pattern, row["make"], ignore.case=TRUE) == TRUE){
+      return <- pattern
+    }
+  }
+  return
+})
+table(found_manufacturers)
+length(found_manufacturers) - sum(is.na(found_manufacturers)) # 1441 valeurs trouv�es !
+
+## Strat�gie 2 : knn avec le champ make
+
 
 
 #
