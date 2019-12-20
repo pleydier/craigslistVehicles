@@ -353,10 +353,18 @@ rm(quali)
 ##################################################################################
 
 
+#on modifie la valeurs des lat / long par la moyenne des lat / long par ville
+data_general_localisation= aggregate(data_abe[, 16:17], list(data_abe$city), mean)
 
+#on cherche à nettoyer notre feature ville (récupérer que la première ville cité
+#sans prendre en compte la deuxième ville ou l'abréviation de d'état)
+data_abe$city = as.character(data_abe$city)
+data_abe$city_clean= strsplit(data_abe$city, "[,//] ")
+func= function(c) {c[1]} #récupérer le premier éléemnt d'une liste
 
+data_abe$city_clean= lapply(data_abe$city_clean, func)
 
-
+write.csv(data_general_localisation, file = "data_general_localisation.csv")
 
 ##################################################################################
 ##################################################################################
