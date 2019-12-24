@@ -12,7 +12,7 @@ install.packages(list.of.packages)
 library(rstudioapi)
 # Set active directory to the document currently opened in RStudio
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-rm= (list=ls())
+rm(list=ls())
 
 library(data.table)
 library(naniar) #pour plot les valeurs manquantes
@@ -330,11 +330,11 @@ data_abe= data_abe %>% filter(year <= 2019
                               , odometer <= 999999
                               , odometer <= 999999
                               , price > 0
-                              , price <= 250000
-                              , long >= -180  #limite US
-                              , long <= -66.9
-                              , lat >= 5.87
-                              , lat <= 71.39) #ca a drop les NaN de lat et long
+                              , price <= 250000)
+                              #, long >= -180  #limite US
+                              #, long <= -66.9
+                              #, lat >= 5.87
+                              #, lat <= 71.39) #ca a drop les NaN de lat et long
 
 summary(data_abe)
 dim(data_abe)
@@ -344,6 +344,19 @@ rm(data_new)
 rm(nums)
 rm(quali)
 
+write.csv(data_abe
+          , file = "data_abe.csv")
+#
+#on va plot nos coordonnées pour voir
+#
+#dev.off(dev.list()["RStudioGD"]) #on nettoie les images
+#newmap <- getMap(resolution = "low")
+#xlim= c(min(data_abe$long, na.rm=T), max(data_abe$long, na.rm=T)) #long 
+#ylim= c(min(data_abe$lat, na.rm=T), max(data_abe$lat, na.rm=T)) #lat
+
+
+#plot(newmap, xlim = xlim, ylim = ylim, asp = 1)
+#points(data_abe$long, data_abe$lat, col = "red", cex = .6)
 
 
 
@@ -354,17 +367,88 @@ rm(quali)
 
 
 #on modifie la valeurs des lat / long par la moyenne des lat / long par ville
-data_general_localisation= aggregate(data_abe[, 16:17], list(data_abe$city), mean)
+data_general_localisation= aggregate(data_abe[, 16:17]
+                                     , list(data_abe$city)
+                                     , mean
+                                     , na.rm= TRUE)
 
-#on cherche à nettoyer notre feature ville (récupérer que la première ville cité
-#sans prendre en compte la deuxième ville ou l'abréviation de d'état)
-data_abe$city = as.character(data_abe$city)
-data_abe$city_clean= strsplit(data_abe$city, "[,//] ")
-func= function(c) {c[1]} #récupérer le premier éléemnt d'une liste
+#
+#on va plot nos coordonnées pour voir
+#
+dev.off(dev.list()["RStudioGD"]) #on nettoie les images
+newmap <- getMap(resolution = "low")
+xlim= c(min(data_general_localisation$long, na.rm=T), max(data_general_localisation$long, na.rm=T)) #long 
+ylim= c(min(data_general_localisation$lat, na.rm=T), max(data_general_localisation$lat, na.rm=T)) #lat
+plot(newmap, xlim = xlim, ylim = ylim, asp = 1)
+points(data_general_localisation$long, data_general_localisation$lat, col = "red", cex = .6)
+# on remarque que le fait d'aggréger nos lat / long a supprimé nos valeurs aberrantes
 
-data_abe$city_clean= lapply(data_abe$city_clean, func)
 
-write.csv(data_general_localisation, file = "data_general_localisation.csv")
+#on va chercher à déterminer de quel ville US, la ville dans notre DF se rapproche le plus
+#(utilisation des lat / long de data_general_localisation)
+
+localisation_us= read.csv("data/us-zip-code-latitude-and-longitude.csv", sep= ";")
+dim(localisation_us)
+localisation_us$geopoint= NULL
+localisation_us$Timezone= NULL
+localisation_us$Zip= NULL
+localisation_us$Daylight.savings.time.flag= NULL
+
+#on a plusieurs fois la même ville avec des coordonnéees uasi égale (différence liéau zip code qu'on a delete)
+#on va donc faire récupérer la première occurence par ville (1er ligne)
+
+#d'abord on range par ordre de ville ET d'état
+localisation_us= localisation_us[order(localisation_us$City, localisation_us$State),]
+#puis on supprime les dupliquées
+localisation_us= localisation_us[!duplicated(localisation_us[c(1, 2)]),]
+dim(localisation_us)
+
+#on a enfin des données de ville / etat exploitable
+#maintenant on va s'amuser à chercher la ville qui est la plus proche des coordonnées
+#que nous avons calculé pour lui associé un Etat (pour la partie Tableau)
+
+#trouvé sur internet
+#permet de faire un merge par rapport à la distance minimale
+greatCircleDistance <- function(lat1, long1, lat2, long2, radius=6372.795){
+  sf <- pi/180
+  lat1 <- lat1*sf
+  lat2 <- lat2*sf
+  long1 <- long1*sf
+  long2 <- long2*sf
+  lod <- abs(long1-long2)
+  radius * atan2(
+    sqrt((cos(lat1)*sin(lod))**2 +
+           (cos(lat2)*sin(lat1)-sin(lat2)*cos(lat1)*cos(lod))**2),
+    sin(lat2)*sin(lat1)+cos(lat2)*cos(lat1)*cos(lod)
+  )
+}
+
+
+dist.merge <- function(x, y, xlongnme, xlatnme, ylongnme, ylatnme){
+  tmp <- t(apply(x[,c(xlongnme, xlatnme)], 1, function(x, y){
+    dists <- apply(y, 1, function(x, y) greatCircleDistance(x[2],
+                                                            x[1], y[2], y[1]), x)
+    cbind(1:nrow(y), dists)[dists == min(dists),,drop=F][1,]
+  }
+  , y[,c(ylongnme, ylatnme)]))
+  tmp <- cbind(x, min.dist=tmp[,2], y[tmp[,1],-match(c(ylongnme,
+                                                       ylatnme), names(y))])
+  row.names(tmp) <- NULL
+  tmp
+}
+
+#attention c'est un peu long
+data_merge_localisation= dist.merge(data_general_localisation
+           , localisation_us
+           , 'long', 'lat', 'Longitude', 'Latitude')
+#on change le nom de nos features
+data_merge_localisation= data_merge_localisation %>% 
+  dplyr::rename(city_neighbour= City, city= Group.1)
+
+write.csv(data_merge_localisation
+          , file = "data_merge_localisation.csv")
+
+
 
 ##################################################################################
 ##################################################################################
