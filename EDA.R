@@ -44,7 +44,7 @@ str(data)
 #on plot les valeurs manquantes pour les 100 000 premières lignes
 vis_miss(data[c(0:100000)], warn_large_data=F)
 #REMARQUE: il semble que certaines que le manque de données dans certaines variables
-          #ne soit pas aléatoire ==> on observe des patterns
+#ne soit pas aléatoire ==> on observe des patterns
 navar= colSums(is.na(data))/nrow(data) #taux de na dans les colonnes (variable)
 navar
 
@@ -232,14 +232,9 @@ data[is.na(data$manufacturer)]$manufacturer = apply(
 )
 sum(is.na(data$manufacturer)) # 12 213 NA (12 366 valeurs trouvees)
 
-## Strategie 2 : assigner � "unknown"
-data$manufacturer[is.na(data$manufacturer)] = "unknown"
+## Strategie 2 : assigner "Not Documented"
+data$manufacturer[is.na(data$manufacturer)] = "Not Documented"
 sum(is.na(data$manufacturer)) # 0 NA (12 213 valeurs remplacees)
-
-## Strategie 3 : knn avec le champ make
-# bag of words sur le champ make
-# knn sur le champ make
-#TODO
 
 
 
@@ -315,10 +310,6 @@ mean(is.na(data_new$year)) #vérification
 #odometer
 data_new$odometer= retraitement(data_new$odometer)
 
-#manufacter
-#peut être regrouper des marques entres elles 
-data_new$manufacturer= retraitement(data_new$manufacturer)
-
 #make, on va probablement devoir suppimer cette varaible (colinéaire avec manufacturer ?????)
 data_new$make= retraitement(data_new$make)
 
@@ -349,10 +340,10 @@ data_abe= data_abe %>% filter(year <= 2019
                               , odometer <= 999999
                               , price > 0
                               , price <= 250000)
-                              #, long >= -180  #limite US
-                              #, long <= -66.9
-                              #, lat >= 5.87
-                              #, lat <= 71.39) #ca a drop les NaN de lat et long
+#, long >= -180  #limite US
+#, long <= -66.9
+#, lat >= 5.87
+#, lat <= 71.39) #ca a drop les NaN de lat et long
 
 summary(data_abe)
 dim(data_abe)
@@ -457,8 +448,8 @@ dist.merge <- function(x, y, xlongnme, xlatnme, ylongnme, ylatnme){
 
 #attention c'est un peu long
 data_merge_localisation= dist.merge(data_general_localisation
-           , localisation_us
-           , 'long', 'lat', 'Longitude', 'Latitude')
+                                    , localisation_us
+                                    , 'long', 'lat', 'Longitude', 'Latitude')
 #on change le nom de nos features
 data_merge_localisation= data_merge_localisation %>% 
   dplyr::rename(city_neighbour= City, city= Group.1)
