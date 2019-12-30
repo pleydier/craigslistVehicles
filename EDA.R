@@ -206,17 +206,28 @@ bar_freq(subset(quali, is.na(condition)), "year", 13)
 ##                                RETRAITEMENT                                 ##
 #################################################################################
 
+data_new= copy(data)
 
 ###################################### NAN ######################################
 
+retraitement= function(x) {
+  if (is.numeric(x)) {
+    x[is.na(x)]= mean(x, na.rm = TRUE)
+    x
+  } else {
+    x[is.na(x)]= names(which.max(table(x)))
+    x
+  }
+} #remplace par mean si numeric soit par la valeur la plus frequente pour les factor
+
 ######### manufacturer #########
 ## Strategie 1 : recherche du manufacturer dans le champ "make"
-sum(is.na(data$manufacturer)) # 24 579 NA
-unique_manufacturers <- unique(data$manufacturer) # These are the known manufacturers
+sum(is.na(data_new$manufacturer)) # 24 579 NA
+unique_manufacturers <- unique(data_new$manufacturer) # These are the known manufacturers
 unique_manufacturers <- unique_manufacturers[-3] # remove the NA value
 # Pour chaque ligne ou manufacturer est NA, chercher un manufacturer connu dans make et desc
-data[is.na(data$manufacturer)]$manufacturer = apply(
-  data[is.na(data$manufacturer)],
+data_new[is.na(data_new$manufacturer)]$manufacturer = apply(
+  data_new[is.na(data_new$manufacturer)],
   1, 
   function(row, count){
     return <- NA
@@ -230,29 +241,14 @@ data[is.na(data$manufacturer)]$manufacturer = apply(
     return
   }
 )
-sum(is.na(data$manufacturer)) # 12 213 NA (12 366 valeurs trouvees)
+sum(is.na(data_new$manufacturer)) # 12 213 NA (12 366 valeurs trouvees)
 
 ## Strategie 2 : assigner "Not Documented"
-data$manufacturer[is.na(data$manufacturer)] = "Not Documented"
-sum(is.na(data$manufacturer)) # 0 NA (12 213 valeurs remplacees)
+data_new$manufacturer[is.na(data_new$manufacturer)] = "Not Documented"
+sum(is.na(data_new$manufacturer)) # 0 NA (12 213 valeurs remplacees)
 
-
-
-
-retraitement= function(x) {
-  if (is.numeric(x)) {
-    x[is.na(x)]= mean(x, na.rm = TRUE)
-    x
-  } else {
-    x[is.na(x)]= names(which.max(table(x)))
-    x
-  }
-} #remplace par mean si numeric soit par la valeur la plus frequente pour les factor
-
-
-
-#paint_color ==> fusion modalité grey et silver et remplacer NaN par "Not Documented"
-data_new= copy(data)
+######### paint_color #########
+# ==> fusion modalité grey et silver et remplacer NaN par "Not Documented"
 
 data_new$paint_color= recode(data_new$paint_color, silver= "grey")
 data_new$paint_color= as.character(data_new$paint_color)
@@ -261,7 +257,8 @@ data_new$paint_color= as.factor(data_new$paint_color)
 data_new$paint_color = droplevels(data_new$paint_color)
 unique(data_new$paint_color)
 
-#size ==> manque des classes dans le segment automobile (classe A B C ... F)
+######### size #########
+# ==> manque des classes dans le segment automobile (classe A B C ... F)
 #on va remplacer NaN par "Not Documented"
 #ou on peut droper
 data_new$size= as.character(data_new$size)
@@ -270,6 +267,7 @@ data_new$size= as.factor(data_new$size)
 data_new$size = droplevels(data_new$size)
 unique(data_new$size)
 
+######### drive #########
 #pattern de valeur manquante entre condition, drive, type
 #drive ==> remplacement NaN par "awd" (autre type de drive) (courant aux US)
 data_new$drive= as.character(data_new$drive)
@@ -278,14 +276,14 @@ data_new$drive= as.factor(data_new$drive)
 data_new$drive = droplevels(data_new$drive)
 unique(data_new$drive)
 
-#type
+######### type #########
 data_new$type= as.character(data_new$type)
 data_new$type[is.na(data_new$type)]= "Not Documented"
 data_new$type= as.factor(data_new$type)
 data_new$type = droplevels(data_new$type)
 unique(data_new$type)
 
-#condition
+######### condition #########
 data_new$condition= recode(data_new$condition, new= "like new")
 data_new$condition= as.character(data_new$condition)
 data_new$condition[is.na(data_new$condition)]= "Not Documented"
@@ -293,7 +291,8 @@ data_new$condition= as.factor(data_new$condition)
 data_new$condition = droplevels(data_new$condition)
 unique(data_new$condition)
 
-#cycinder, pas sûr par cete transformation
+######### cylinders #########
+# pas sûr par cete transformation
 data_new$cylinders= as.character(data_new$cylinders)
 data_new$cylinders[is.na(data_new$cylinders)]= "Not Documented"
 data_new$cylinders= as.factor(data_new$cylinders)
@@ -301,38 +300,38 @@ data_new$cylinders = droplevels(data_new$cylinders)
 unique(data_new$cylinders)
 
 
-#year
+######### year #########
 data_new$year= as.factor(data_new$year)#on passe en factor au cas ou
 data_new$year= retraitement(data_new$year)
 data_new$year= as.numeric(as.character(data_new$year))
 mean(is.na(data_new$year)) #vérification
 
-#odometer
+######### odometer #########
 data_new$odometer= retraitement(data_new$odometer)
 
-#make, on va probablement devoir suppimer cette varaible (colinéaire avec manufacturer ?????)
+######### make #########
 data_new$make= retraitement(data_new$make)
 
-#fuel
+######### fuel #########
 data_new$fuel= retraitement(data_new$fuel)
 
-#title
+######### title #########
 data_new$title_status= retraitement(data_new$title_status)
 
-#transmission
+######### transmission #########
 data_new$transmission= retraitement(data_new$transmission)
 
 
-#la vérificaiton
+#la verificaiton
 navar= colSums(is.na(data_new))/nrow(data_new) #taux de na dans les colonnes (variable)
 navar
 
 vis_miss(setDT(data_new)[c(0:200000)], warn_large_data=F)
 
 
-#
-#suppression valeurs aberrantes
-#
+
+###################################### Outliers ######################################
+
 data_abe= copy(data_new)
 data_abe= data_abe %>% filter(year <= 2019
                               , year >= 1950
