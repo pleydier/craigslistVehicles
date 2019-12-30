@@ -211,25 +211,36 @@ bar_freq(subset(quali, is.na(condition)), "year", 13)
 
 ######### manufacturer #########
 ## Strategie 1 : recherche du manufacturer dans le champ "make"
+sum(is.na(data$manufacturer)) # 24 579 NA
 unique_manufacturers <- unique(data$manufacturer) # These are the known manufacturers
 unique_manufacturers <- unique_manufacturers[-3] # remove the NA value
-man_is_na <- data[is.na(data$manufacturer)] # Rows with manufacturer NA
-dim(man_is_na) # 25k NA
-sum(is.na(man_is_na$make)) # Seulement 18 make sont NA
-# Pour chaque ligne ou manufacturer est NA, chercher un manufacturer connu dans make
-found_manufacturers = apply(man_is_na, 1, function(row, count){
-  return <- NA
-  for (pattern in unique_manufacturers){
-    if(grepl(pattern, row["make"], ignore.case=TRUE) == TRUE){
-      return <- pattern
+# Pour chaque ligne ou manufacturer est NA, chercher un manufacturer connu dans make et desc
+data[is.na(data$manufacturer)]$manufacturer = apply(
+  data[is.na(data$manufacturer)],
+  1, 
+  function(row, count){
+    return <- NA
+    for (pattern in unique_manufacturers){
+      if(grepl(pattern, row["make"], ignore.case=TRUE)){
+        return <- pattern
+      }else if(grepl(pattern, row["desc"], ignore.case=TRUE)){
+        return <- pattern
+      }
     }
+    return
   }
-  return
-})
-table(found_manufacturers)
-length(found_manufacturers) - sum(is.na(found_manufacturers)) # 1441 valeurs trouv�es !
+)
+sum(is.na(data$manufacturer)) # 12 213 NA (12 366 valeurs trouvees)
 
-## Strategie 2 : knn avec le champ make
+## Strategie 2 : assigner � "unknown"
+data$manufacturer[is.na(data$manufacturer)] = "unknown"
+sum(is.na(data$manufacturer)) # 0 NA (12 213 valeurs remplacees)
+
+## Strategie 3 : knn avec le champ make
+# bag of words sur le champ make
+# knn sur le champ make
+#TODO
+
 
 
 
