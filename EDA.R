@@ -5,7 +5,7 @@
 
 ###### installation packages necessaires ########
 list.of.packages= c("data.table", "naniar", "ggplot2", "dplyr", "tidyr", "rworldmap"
-                    , "corrplot", "rstudioapi")
+                    , "corrplot", "rstudioapi", "VIM")
 install.packages(list.of.packages)
 #################################################
 
@@ -25,6 +25,7 @@ library(tidyr) #drop na
 library(rworldmap)
 #install.packages("rworldmap")
 library(corrplot)
+library(VIM)
 #install.packages("corrplot")
 
 #data= read.csv("data/craigslistVehicles.csv", na.strings= "", sep= ",")
@@ -33,23 +34,9 @@ dim(data)
 colnames(data)
 head(data)
 
-
 #################################################################################
 #################################################################################
 #################################################################################
-
-
-#
-#
-#
-
-#on va dropper des variables que l'on ne compte pas exploiter (les url, id, desc)
-data$url = NULL
-data$city_url= NULL
-data$image_url= NULL
-data$desc= NULL
-data$VIN= NULL
-colnames(data)
 
 #informations sur les features de notre table
 str(data)
@@ -57,14 +44,14 @@ str(data)
 #on plot les valeurs manquantes pour les 100 000 premières lignes
 vis_miss(data[c(0:100000)], warn_large_data=F)
 #REMARQUE: il semble que certaines que le manque de données dans certaines variables
-          #ne soit pas aléatoire ==> on observe des patterns
+#ne soit pas aléatoire ==> on observe des patterns
 navar= colSums(is.na(data))/nrow(data) #taux de na dans les colonnes (variable)
 navar
 
-naind= rowSums(is.na(data))/ncol(data)#taux na par individu
+naind= rowSums(is.na(data))#/ncol(data)#taux na par individu
 max(naind)
 
-
+table(naind) #TODO: Dropper les mecs qui ont trop de nan ?
 
 data= setDF(data)
 
@@ -175,7 +162,9 @@ dev.off(dev.list()["RStudioGD"]) #on nettoie les images
 plot(newmap, xlim = xlim_us, ylim = ylim_us, asp = 1)
 points(nums$long, nums$lat, col = "red", cex = .6)
 #on va garder ces limites pour nos données
-
+#TODO: Ameliorer les frontieres pour rendre la data plus propre
+# => mettre en NA les outliers
+# Reconstruire les NA en fonction de la ville
 
 
 
@@ -213,18 +202,13 @@ bar_freq(subset(quali, is.na(condition)), "year", 13)
 #################################################################################
 
 
-
-
-
-
-
 #################################################################################
 ##                                RETRAITEMENT                                 ##
 #################################################################################
 
-#
-#traitement nan
-#
+data_new= copy(data)
+
+###################################### NAN ######################################
 
 retraitement= function(x) {
   if (is.numeric(x)) {
@@ -236,10 +220,35 @@ retraitement= function(x) {
   }
 } #remplace par mean si numeric soit par la valeur la plus frequente pour les factor
 
+######### manufacturer #########
+## Strategie 1 : recherche du manufacturer dans le champ "make"
+sum(is.na(data_new$manufacturer)) # 24 579 NA
+unique_manufacturers <- unique(data_new$manufacturer) # These are the known manufacturers
+unique_manufacturers <- unique_manufacturers[-3] # remove the NA value
+# Pour chaque ligne ou manufacturer est NA, chercher un manufacturer connu dans make et desc
+data_new[is.na(data_new$manufacturer)]$manufacturer = apply(
+  data_new[is.na(data_new$manufacturer)],
+  1, 
+  function(row, count){
+    return <- NA
+    for (pattern in unique_manufacturers){
+      if(grepl(pattern, row["make"], ignore.case=TRUE)){
+        return <- pattern
+      }else if(grepl(pattern, row["desc"], ignore.case=TRUE)){
+        return <- pattern
+      }
+    }
+    return
+  }
+)
+sum(is.na(data_new$manufacturer)) # 12 213 NA (12 366 valeurs trouvees)
 
+## Strategie 2 : assigner "Not Documented"
+data_new$manufacturer[is.na(data_new$manufacturer)] = "Not Documented"
+sum(is.na(data_new$manufacturer)) # 0 NA (12 213 valeurs remplacees)
 
-#paint_color ==> fusion modalité grey et silver et remplacer NaN par "Not Documented"
-data_new= copy(data)
+######### paint_color #########
+# ==> fusion modalité grey et silver et remplacer NaN par "Not Documented"
 
 data_new$paint_color= recode(data_new$paint_color, silver= "grey")
 data_new$paint_color= as.character(data_new$paint_color)
@@ -248,7 +257,8 @@ data_new$paint_color= as.factor(data_new$paint_color)
 data_new$paint_color = droplevels(data_new$paint_color)
 unique(data_new$paint_color)
 
-#size ==> manque des classes dans le segment automobile (classe A B C ... F)
+######### size #########
+# ==> manque des classes dans le segment automobile (classe A B C ... F)
 #on va remplacer NaN par "Not Documented"
 #ou on peut droper
 data_new$size= as.character(data_new$size)
@@ -257,6 +267,7 @@ data_new$size= as.factor(data_new$size)
 data_new$size = droplevels(data_new$size)
 unique(data_new$size)
 
+######### drive #########
 #pattern de valeur manquante entre condition, drive, type
 #drive ==> remplacement NaN par "awd" (autre type de drive) (courant aux US)
 data_new$drive= as.character(data_new$drive)
@@ -265,14 +276,14 @@ data_new$drive= as.factor(data_new$drive)
 data_new$drive = droplevels(data_new$drive)
 unique(data_new$drive)
 
-#type
+######### type #########
 data_new$type= as.character(data_new$type)
 data_new$type[is.na(data_new$type)]= "Not Documented"
 data_new$type= as.factor(data_new$type)
 data_new$type = droplevels(data_new$type)
 unique(data_new$type)
 
-#condition
+######### condition #########
 data_new$condition= recode(data_new$condition, new= "like new")
 data_new$condition= as.character(data_new$condition)
 data_new$condition[is.na(data_new$condition)]= "Not Documented"
@@ -280,7 +291,8 @@ data_new$condition= as.factor(data_new$condition)
 data_new$condition = droplevels(data_new$condition)
 unique(data_new$condition)
 
-#cycinder, pas sûr par cete transformation
+######### cylinders #########
+# pas sûr par cete transformation
 data_new$cylinders= as.character(data_new$cylinders)
 data_new$cylinders[is.na(data_new$cylinders)]= "Not Documented"
 data_new$cylinders= as.factor(data_new$cylinders)
@@ -288,42 +300,38 @@ data_new$cylinders = droplevels(data_new$cylinders)
 unique(data_new$cylinders)
 
 
-#year
+######### year #########
 data_new$year= as.factor(data_new$year)#on passe en factor au cas ou
 data_new$year= retraitement(data_new$year)
 data_new$year= as.numeric(as.character(data_new$year))
 mean(is.na(data_new$year)) #vérification
 
-#odometer
+######### odometer #########
 data_new$odometer= retraitement(data_new$odometer)
 
-#manufacter
-#peut être regrouper des marques entres elles 
-data_new$manufacturer= retraitement(data_new$manufacturer)
-
-#make, on va probablement devoir suppimer cette varaible (colinéaire avec manufacturer ?????)
+######### make #########
 data_new$make= retraitement(data_new$make)
 
-#fuel
+######### fuel #########
 data_new$fuel= retraitement(data_new$fuel)
 
-#title
+######### title #########
 data_new$title_status= retraitement(data_new$title_status)
 
-#transmission
+######### transmission #########
 data_new$transmission= retraitement(data_new$transmission)
 
 
-#la vérificaiton
+#la verificaiton
 navar= colSums(is.na(data_new))/nrow(data_new) #taux de na dans les colonnes (variable)
 navar
 
 vis_miss(setDT(data_new)[c(0:200000)], warn_large_data=F)
 
 
-#
-#suppression valeurs aberrantes
-#
+
+###################################### Outliers ######################################
+
 data_abe= copy(data_new)
 data_abe= data_abe %>% filter(year <= 2019
                               , year >= 1950
@@ -331,10 +339,10 @@ data_abe= data_abe %>% filter(year <= 2019
                               , odometer <= 999999
                               , price > 0
                               , price <= 250000)
-                              #, long >= -180  #limite US
-                              #, long <= -66.9
-                              #, lat >= 5.87
-                              #, lat <= 71.39) #ca a drop les NaN de lat et long
+#, long >= -180  #limite US
+#, long <= -66.9
+#, lat >= 5.87
+#, lat <= 71.39) #ca a drop les NaN de lat et long
 
 summary(data_abe)
 dim(data_abe)
@@ -439,8 +447,8 @@ dist.merge <- function(x, y, xlongnme, xlatnme, ylongnme, ylatnme){
 
 #attention c'est un peu long
 data_merge_localisation= dist.merge(data_general_localisation
-           , localisation_us
-           , 'long', 'lat', 'Longitude', 'Latitude')
+                                    , localisation_us
+                                    , 'long', 'lat', 'Longitude', 'Latitude')
 #on change le nom de nos features
 data_merge_localisation= data_merge_localisation %>% 
   dplyr::rename(city_neighbour= City, city= Group.1)
