@@ -45,13 +45,11 @@ str(data)
 vis_miss(data[c(0:100000)], warn_large_data=F)
 #REMARQUE: il semble que certaines que le manque de données dans certaines variables
 #ne soit pas aléatoire ==> on observe des patterns
-navar= colSums(is.na(data))/nrow(data) #taux de na dans les colonnes (variable)
+navar= colSums(is.na(data))/nrow(data) # taux de na dans les colonnes (variable)
 navar
 
-naind= rowSums(is.na(data))#/ncol(data)#taux na par individu
+naind= rowSums(is.na(data)) # taux na par individu
 max(naind)
-
-table(naind) #TODO: Dropper les mecs qui ont trop de nan ?
 
 data= setDF(data)
 
@@ -210,6 +208,12 @@ data_new= copy(data)
 
 ###################################### NAN ######################################
 
+######### Par observation #########
+table(naind)
+dim(data_new) # 525 839 observations
+data_new = data_new[naind < 10] # Drop ceux qui ont trop de NA
+dim(data_new) # 525 606 observations, soit 233 drops
+
 retraitement= function(x) {
   if (is.numeric(x)) {
     x[is.na(x)]= mean(x, na.rm = TRUE)
@@ -222,7 +226,7 @@ retraitement= function(x) {
 
 ######### manufacturer #########
 ## Strategie 1 : recherche du manufacturer dans le champ "make"
-sum(is.na(data_new$manufacturer)) # 24 579 NA
+sum(is.na(data_new$manufacturer)) # 24 487 NA
 unique_manufacturers <- unique(data_new$manufacturer) # These are the known manufacturers
 unique_manufacturers <- unique_manufacturers[-3] # remove the NA value
 # Pour chaque ligne ou manufacturer est NA, chercher un manufacturer connu dans make et desc
@@ -241,7 +245,7 @@ data_new[is.na(data_new$manufacturer)]$manufacturer = apply(
     return
   }
 )
-sum(is.na(data_new$manufacturer)) # 12 213 NA (12 366 valeurs trouvees)
+sum(is.na(data_new$manufacturer)) # 12 192 NA (12 295 valeurs trouvees)
 
 ## Strategie 2 : assigner "Not Documented"
 data_new$manufacturer[is.na(data_new$manufacturer)] = "Not Documented"
