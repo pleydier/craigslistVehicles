@@ -230,8 +230,8 @@ sum(is.na(data_new$manufacturer)) # 24 487 NA
 unique_manufacturers <- unique(data_new$manufacturer) # These are the known manufacturers
 unique_manufacturers <- unique_manufacturers[-3] # remove the NA value
 # Pour chaque ligne ou manufacturer est NA, chercher un manufacturer connu dans make et desc
-data_new[is.na(data_new$manufacturer)]$manufacturer = apply(
-  data_new[is.na(data_new$manufacturer)],
+data_new[is.na(data_new$manufacturer),]$manufacturer = apply(
+  data_new[is.na(data_new$manufacturer),],
   1, 
   function(row, count){
     return <- NA
@@ -248,7 +248,9 @@ data_new[is.na(data_new$manufacturer)]$manufacturer = apply(
 sum(is.na(data_new$manufacturer)) # 12 192 NA (12 295 valeurs trouvees)
 
 ## Strategie 2 : assigner "Not Documented"
+data_new$manufacturer= as.character(data_new$manufacturer)
 data_new$manufacturer[is.na(data_new$manufacturer)] = "Not Documented"
+data_new$manufacturer= as.factor(data_new$manufacturer)
 sum(is.na(data_new$manufacturer)) # 0 NA (12 213 valeurs remplacees)
 
 ######### paint_color #########
@@ -356,8 +358,7 @@ rm(data_new)
 rm(nums)
 rm(quali)
 
-write.csv(data_abe
-          , file = "data_abe.csv")
+
 #
 #on va plot nos coordonnées pour voir
 #
@@ -379,10 +380,31 @@ write.csv(data_abe
 
 
 #on modifie la valeurs des lat / long par la moyenne des lat / long par ville
-data_general_localisation= aggregate(data_abe[, 16:17]
+data_general_localisation= aggregate(data_abe[, 21:22]
                                      , list(data_abe$city)
                                      , mean
                                      , na.rm= TRUE)
+#on associe nos nouvelles valeurs de lat / long à notre dataset initial
+data_merge= merge(data_abe, data_general_localisation, by.x= "city", by.y= "Group.1")
+data_merge$lat.x= NULL
+data_merge$long.x= NULL
+data_merge$url= NULL
+data_merge$city_url= NULL
+data_merge$VIN=NULL
+data_merge$desc= NULL
+data_merge$image_url= NULL
+colnames(data_merge)[colnames(data_merge) == 'lat.y'] <- 'lat'
+colnames(data_merge)[colnames(data_merge) == 'long.y'] <- 'long'
+data_abe= data_merge
+rm(data_merge)
+
+#
+#suppression doublons
+#
+dim(data_abe)
+data_abe= data_abe[!duplicated(data_abe)]
+dim(data_abe)
+
 
 #
 #on va plot nos coordonnées pour voir
@@ -466,8 +488,9 @@ write.csv(data_merge_localisation
 ##################################################################################
 ##################################################################################
 
-
-
+#DATASET FINAL A RECUPERER !!!!!!!!!!!!!!!! #
+write.csv(data_abe
+          , file = "data_abe.csv")
 
 
 
@@ -489,14 +512,4 @@ summary(data_abe)
 par(mfrow=c(1,1))
 m= cor(nums)
 corrplot(m)
-
-
-
-
-
-#
-#enregistrement nouvelle table propre
-#
-write.csv(data_abe, file = "data_abe.csv")
-
 
