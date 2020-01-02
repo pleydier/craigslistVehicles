@@ -1,0 +1,83 @@
+---
+title: "Unsupervised Learning"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rworldmap)
+library(FactoMineR)
+library(factoextra)
+```
+
+## Craigslist Vehicles
+
+First, we are going to import the cleaned dataset.
+
+```{r dataset import}
+data <- read.csv("data/data_abe.csv")
+data$X <- NULL # Remove the index from the csv
+data <- na.omit(data) # Remove potential NA
+dim(data)
+colnames(data)
+```
+
+## 1. Geographical segmentation
+
+We want to divide our American market into several regions. Nevertheless, we don't know how to properly define the regions, and how many regions we should have.
+
+```{r visualise the dataset}
+newmap <- getMap(resolution = "low")
+xlim= c(min(data$long, na.rm=T), max(data$long, na.rm=T)) #long 
+ylim= c(min(data$lat, na.rm=T), max(data$lat, na.rm=T)) #lat
+plot(newmap, xlim = xlim, ylim = ylim, asp = 1)
+points(data$long, data$lat, col = "red", cex = .6)
+```
+
+In order to solve this problem, we are going to use clustering on the latitude and longitude of our dataset. Let's find out how many clusters we should create.
+
+```{r Clustering}
+# We need to normalize our values
+data$scaled_lat <- scale(data$lat)
+data$scaled_long <- scale(data$long)
+# First, let's find the optimal number of clusters
+total_within_ss <- rep(0, times=10)
+for(i in 1:10){
+  km <- kmeans(data[, c("lat","long")], i)
+  total_within_ss[i] <- km$tot.withinss
+}
+plot(total_within_ss, type="b",xlab="Number of clusters",ylab="Total within sum of squares", col="blue", lwd=1.5)
+```
+
+As we can see, applying the elbow rule, 3 seems to be the best number of clusters for our problem.
+We are now going to apply the kmeans algorithm to our dataset and plot the generated clusters.
+
+```{r Visualise the clusters}
+km <- kmeans(data[, c("lat","long")], 3)
+data$geographical_cluster <- km$cluster
+newmap <- getMap(resolution = "low")
+plot(newmap, xlim = xlim, ylim = ylim, asp = 1)
+points(data[data$geographical_cluster == 1,]$long, data[data$geographical_cluster == 1,]$lat, col="blue", cex=.6)
+points(data[data$geographical_cluster == 2,]$long, data[data$geographical_cluster == 2,]$lat, col="red", cex=.6)
+points(data[data$geographical_cluster == 3,]$long, data[data$geographical_cluster == 3,]$lat, col="green", cex=.6)
+legend("topleft", c("1","2", "3"), fill=c("blue","red", "green"))
+```
+
+Our recommandation for market geographical segmentation is to separate the country in three segments:
+- Eastern
+- Central
+- Western
+
+The boundaries are defined by the map printed earlier.
+
+Finally, we will use the explained inertia metrics to evaluate our Kmeans algorithm.
+
+```{r Evaluate our kmeans}
+explaned_inertia <- rep(0,times=10)
+for (k in 2:10){
+  clus <- kmeans(data[, c("lat","long")],centers=k,nstart=5)  
+  explaned_inertia[k] <- clus$betweenss/clus$totss
+}
+
+plot(1:10,explaned_inertia,type="b",xlab="Number of clusters",ylab="% explained inertia", col="blue", lwd=1.5)
+```
