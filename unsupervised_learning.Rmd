@@ -81,3 +81,33 @@ for (k in 2:10){
 
 plot(1:10,explaned_inertia,type="b",xlab="Number of clusters",ylab="% explained inertia", col="blue", lwd=1.5)
 ```
+
+
+## 2. Vehicles segmentation
+
+We are now going to try and segment the vehicles found on Craigslist. In order to do so, we are first going to perform a MCA on the variables (since they are categorical variables), and then to perform clustering.
+
+```{r ACM and cluster optimal number search}
+# Performing a MCA keeping all the dimensions.
+data.mca <- MCA(data[,c("manufacturer", "condition", "fuel", "transmission", "drive", "size", "type", "paint_color")], ncp=8, graph=FALSE)
+
+# Let's find the optimal number of clusters
+total_within_ss <- rep(0, times=10)
+for(i in 1:10){
+  km <- kmeans(data.mca$ind$coord, i)
+  total_within_ss[i] <- km$tot.withinss
+}
+plot(total_within_ss, type="b",xlab="Number of clusters",ylab="Total within sum of squares", col="blue", lwd=1.5)
+```
+
+Let's actually apply the Kmeans clustering.
+
+```{r Clustering}
+km <- kmeans(data.mca$ind$coord, 8)
+```
+
+Finally, let's visualize our clusters on the two first principal components of the MCA.
+
+
+
+
