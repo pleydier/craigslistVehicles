@@ -103,11 +103,22 @@ plot(total_within_ss, type="b",xlab="Number of clusters",ylab="Total within sum 
 Let's actually apply the Kmeans clustering.
 
 ```{r Clustering}
-km <- kmeans(data.mca$ind$coord, 8)
+km <- kmeans(data.mca$ind$coord, 3)
+data.mca$ind$cluster <- km$cluster
 ```
 
 Finally, let's visualize our clusters on the two first principal components of the MCA.
 
-
+```{r Visualize the clustering}
+# Plot the first two coordinates, cluster by cluster
+plot(data.mca$ind$coord[data.mca$ind$cluster==1, 1:2], col="blue", xlab="Dim 1",ylab="Dim 2", cex=.6)
+points(data.mca$ind$coord[data.mca$ind$cluster==2, 1:2], col="red", cex=.6)
+points(data.mca$ind$coord[data.mca$ind$cluster==3, 1:2], col="green", cex=.6)
+points(data.mca$ind$coord[data.mca$ind$cluster==4, 1:2], col="yellow", cex=.6)
+points(data.mca$ind$coord[data.mca$ind$cluster==5, 1:2], col="pink", cex=.6)
+points(data.mca$ind$coord[data.mca$ind$cluster==6, 1:2], col="purple", cex=.6)
+points(data.mca$ind$coord[data.mca$ind$cluster==7, 1:2], col="orange", cex=.6)
+points(data.mca$ind$coord[data.mca$ind$cluster==8, 1:2], col="brown", cex=.6)
+```
 
 
