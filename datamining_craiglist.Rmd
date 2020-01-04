@@ -675,7 +675,15 @@ fviz_pca_var(data.mca, col.var ="blue")
 
 ```{r}
 #On peut exporter les données avec les différents clusters pour Tableau
-write.csv(data
-          , file = "data/data_cluster.csv")
+data_cluster_geo= data[, c("geographical_cluster", "city")]
+
+data_grouped= aggregate(data_cluster_geo$geographical_cluster, by= list(data_cluster_geo$city)
+                        , mean
+                        , na.rm= TRUE)
+write.csv(data_grouped
+         , file = "data/data_cluster.csv")
+rm(data_cluster_geo)
+rm(data_grouped)
+
 ```
 
