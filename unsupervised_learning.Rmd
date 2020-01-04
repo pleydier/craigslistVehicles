@@ -8,6 +8,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(rworldmap)
 library(FactoMineR)
 library(factoextra)
+library(corrplot)
 ```
 
 ## Craigslist Vehicles
@@ -36,7 +37,7 @@ points(data$long, data$lat, col = "red", cex = .6)
 
 In order to solve this problem, we are going to use clustering on the latitude and longitude of our dataset. Let's find out how many clusters we should create.
 
-```{r Clustering}
+```{r Geographical Clustering}
 # We need to normalize our values
 data$scaled_lat <- scale(data$lat)
 data$scaled_long <- scale(data$long)
@@ -49,26 +50,26 @@ for(i in 1:10){
 plot(total_within_ss, type="b",xlab="Number of clusters",ylab="Total within sum of squares", col="blue", lwd=1.5)
 ```
 
-As we can see, applying the elbow rule, 3 seems to be the best number of clusters for our problem.
+As we can see, applying the elbow rule, 2 seems to be the best number of clusters for our problem.
 We are now going to apply the kmeans algorithm to our dataset and plot the generated clusters.
 
 ```{r Visualise the clusters}
-km <- kmeans(data[, c("lat","long")], 3)
+km <- kmeans(data[, c("lat","long")], 2, nstart=5)
 data$geographical_cluster <- km$cluster
 newmap <- getMap(resolution = "low")
 plot(newmap, xlim = xlim, ylim = ylim, asp = 1)
 points(data[data$geographical_cluster == 1,]$long, data[data$geographical_cluster == 1,]$lat, col="blue", cex=.6)
 points(data[data$geographical_cluster == 2,]$long, data[data$geographical_cluster == 2,]$lat, col="red", cex=.6)
-points(data[data$geographical_cluster == 3,]$long, data[data$geographical_cluster == 3,]$lat, col="green", cex=.6)
-legend("topleft", c("1","2", "3"), fill=c("blue","red", "green"))
+legend("topleft", c("1","2"), fill=c("blue","red"))
 ```
 
-Our recommandation for market geographical segmentation is to separate the country in three segments:
+Our recommandation for market geographical segmentation is to separate the country in two segments:
 - Eastern
-- Central
 - Western
 
 The boundaries are defined by the map printed earlier.
+
+Nevertheless, if for business purposes, it is necessary to split the market into more than two sub-markets, this K-means algorithm is able to provide us with the most homogeneous sub-markets.
 
 Finally, we will use the explained inertia metrics to evaluate our Kmeans algorithm.
 
@@ -87,14 +88,35 @@ plot(1:10,explaned_inertia,type="b",xlab="Number of clusters",ylab="% explained 
 
 We are now going to try and segment the vehicles found on Craigslist. In order to do so, we are first going to perform a MCA on the variables (since they are categorical variables), and then to perform clustering.
 
-```{r ACM and cluster optimal number search}
-# Performing a MCA keeping all the dimensions.
-data.mca <- MCA(data[,c("manufacturer", "condition", "fuel", "transmission", "drive", "size", "type", "paint_color")], ncp=8, graph=FALSE)
+### 2.1. Multiple Component Analysis
 
+The goal of the MCA here is to convert our categorical data to numerical. Thus, we are going to keep every dimensions of the MCA, since we do not want to reduce the dimensionality of our dataset and, thus, to loose information.
+
+```{r Vehicle MCA}
+# Performing a MCA keeping all the dimensions.
+data.mca <- MCA(data[,c("manufacturer", "condition", "fuel", "transmission", "drive", "size", "type", "paint_color")], ncp=Inf, graph=FALSE, level.ventil=0.05)
+
+# Visualizing the dimensions contributions
+fviz_screeplot (data.mca, addlabels = TRUE)
+```
+
+We can better understand our MCA axes with the following graph.
+
+```{r Axes correlations with variables}
+# Getting the MCA variables
+var <- get_mca_var(data.mca)
+# Plotting the correlations between variables and MCA axes
+corrplot(var$contrib, is.corr=FALSE,main="Contribution")
+fviz_mca_var (data.mca, choice = "mca.cor", repel=TRUE)
+```
+
+### 2.2. K-Means Clustering
+
+```{r Cluster optimal number search}
 # Let's find the optimal number of clusters
 total_within_ss <- rep(0, times=10)
 for(i in 1:10){
-  km <- kmeans(data.mca$ind$coord, i)
+  km <- kmeans(data.mca$ind$coord, i, nstart=5)
   total_within_ss[i] <- km$tot.withinss
 }
 plot(total_within_ss, type="b",xlab="Number of clusters",ylab="Total within sum of squares", col="blue", lwd=1.5)
@@ -102,14 +124,14 @@ plot(total_within_ss, type="b",xlab="Number of clusters",ylab="Total within sum 
 
 Let's actually apply the Kmeans clustering.
 
-```{r Clustering}
-km <- kmeans(data.mca$ind$coord, 3)
+```{r Vehicle Clustering}
+km <- kmeans(data.mca$ind$coord, 8, nstart=5)
 data.mca$ind$cluster <- km$cluster
 ```
 
 Finally, let's visualize our clusters on the two first principal components of the MCA.
 
-```{r Visualize the clustering}
+```{r Visualize the vehicle clustering}
 # Plot the first two coordinates, cluster by cluster
 plot(data.mca$ind$coord[data.mca$ind$cluster==1, 1:2], col="blue", xlab="Dim 1",ylab="Dim 2", cex=.6)
 points(data.mca$ind$coord[data.mca$ind$cluster==2, 1:2], col="red", cex=.6)
@@ -121,4 +143,9 @@ points(data.mca$ind$coord[data.mca$ind$cluster==7, 1:2], col="orange", cex=.6)
 points(data.mca$ind$coord[data.mca$ind$cluster==8, 1:2], col="brown", cex=.6)
 ```
 
+It is hard to visualize the clusters in only two dimensions, since our MCA produce 10 dimensions. Furthermore, the two first dimensions explain only 17.7% of the total variance.
 
+```{r Explain the firstdimensions}
+fviz_eig(data.mca, addlabels = TRUE, ylim = c(0, 30))
+fviz_pca_var(data.mca, col.var ="blue")
+```
