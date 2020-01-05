@@ -1,0 +1,191 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+#J'importe la base principale
+data = read.csv("data_abe.csv", header = T, sep = ',', na.strings= "")
+```
+
+
+```{r}
+#Je prends à part les variables QUANTITATIVES
+data_num = data[,c(3,4,10,17,18)]
+```
+
+
+```{r}
+#Je retire des variables inutiles
+data = data[,-c(1,2,6)]
+```
+
+```{r}
+#J'importe la librairie des dummies. Je prends à part les variables à "dummifier".
+
+library(dummies)
+data_dummy <- data[,c(3,4,5,6,8,9,10,11,12,13)]
+data_dummy <- dummy.data.frame(data_dummy)
+```
+
+```{r}
+#Je fusionne les variables QUANTITAVES et les DUMMIES.
+
+data_final <- cbind(data_num,data_dummy)
+```
+
+```{r}
+#J'importe la librairie BBmisc pour utiliser la fonction "normalize"
+library(BBmisc)
+data_final = normalize(data_final, method = "standardize")
+
+#Régression.
+set.seed(1)
+train.index <- sample(c(1:dim(data_final)[1]), dim(data_final)[1]*0.6)
+valid.index <- setdiff(c(1:dim(data_final)[1]),train.index)
+train.df <- data_final[train.index,]
+valid.df <- data_final[train.index,]
+lmm <- lm(price~.,data=data_final)
+summary(lmm)
+```
+
+```{r}
+#On trace un graphique pour illustrer la comparaison de nos prédictions aux valeurs réelles. On se limite à 250 cas dans une volonté de clarté du graphique.
+lmm.pred <- predict(lmm,valid.df)
+plot(c(1:250),lmm.pred[1:250],type="l",col="red",xlab="Echantillon de 250 voitures",ylab = "Prix réels (noir) et prix prédits (rouge)")
+lines(c(1:250),valid.df$price[1:250],col="black")
+```
+
+```{r}
+#On visualise graphiquement l'erreur en se limitant à 500 cas.
+plot(c(1:500),valid.df$price[1:500]-lmm.pred[1:500],type="l",col="black",xlab="Echantillon de 500 voitures",ylab = "Erreur (prix réel - prix prédit)")
+
+#Moyenne des erreurs :
+mean(valid.df$price - lmm.pred)
+#Moyenne des prix :
+mean(valid.df$price)
+```
+
+
+```{r}
+#Je dois renommer certaines variables pour appliquer le random forest, en enlevant les espaces ou caractères spéciaux.
+
+colnames(data_final)[7] <- "manufactureralfaromeo" 
+colnames(data_final)[8] <- "manufacturerastonmartin"
+colnames(data_final)[21] <- "manufacturerharleydavidson"
+colnames(data_final)[28] <- "manufacturerlandrover"
+colnames(data_final)[32] <- "manufacturermercedesbenz"
+colnames(data_final)[38] <- "manufacturerNotDocumented"
+colnames(data_final)[51] <- "conditionlikenew"
+colnames(data_final)[52] <- "conditionNotDocumented"
+colnames(data_final)[54] <- "cylinders10cylinders"
+colnames(data_final)[55] <- "cylinders12cylinders"
+colnames(data_final)[56] <- "cylinders3cylinders"
+colnames(data_final)[57] <- "cylinders4cylinders"
+colnames(data_final)[58] <- "cylinders5cylinders"
+colnames(data_final)[59] <- "cylinders6cylinders"
+colnames(data_final)[60] <- "cylinders8cylinders"
+colnames(data_final)[61] <- "cylindersNotDocumented"
+colnames(data_final)[68] <- "titlestatusclean"
+colnames(data_final)[69] <- "titlestatuslien"          
+colnames(data_final)[70] <- "titlestatusmissing"                
+colnames(data_final)[71] <- "titlestatuspartsonly"
+colnames(data_final)[72] <- "titlestatusrebuilt"     
+colnames(data_final)[73] <- "titlestatussalvage"      
+colnames(data_final)[79] <- "driveNotDocumented"
+colnames(data_final)[82] <- "sizefullsize"
+colnames(data_final)[83] <- "sizemidsize"
+colnames(data_final)[84] <- "sizeNotDocumented"
+colnames(data_final)[85] <- "sizesubcompact"
+colnames(data_final)[90] <- "typeminivan"
+colnames(data_final)[91] <- "typeNotDocumented"
+colnames(data_final)[100] <- "paintcolorblack"
+colnames(data_final)[101] <- "paintcolorblue"
+colnames(data_final)[102] <- "paintcolorbrown"
+colnames(data_final)[103] <- "paintcolorcustom"
+colnames(data_final)[104] <- "paintcolorgreen"
+colnames(data_final)[105] <- "paintcolorgrey"
+colnames(data_final)[106] <- "paintcolorNotDocumented"
+colnames(data_final)[107] <- "paintcolororange"
+colnames(data_final)[108] <- "paintcolorpurple"
+colnames(data_final)[109] <- "paintcolorred"
+colnames(data_final)[110] <- "paintcolorwhite"
+colnames(data_final)[111] <- "paintcoloryellow"
+
+
+colnames(valid.df)[7] <- "manufactureralfaromeo" 
+colnames(valid.df)[8] <- "manufacturerastonmartin"
+colnames(valid.df)[21] <- "manufacturerharleydavidson"
+colnames(valid.df)[28] <- "manufacturerlandrover"
+colnames(valid.df)[32] <- "manufacturermercedesbenz"
+colnames(valid.df)[38] <- "manufacturerNotDocumented"
+colnames(valid.df)[51] <- "conditionlikenew"
+colnames(valid.df)[52] <- "conditionNotDocumented"
+colnames(valid.df)[54] <- "cylinders10cylinders"
+colnames(valid.df)[55] <- "cylinders12cylinders"
+colnames(valid.df)[56] <- "cylinders3cylinders"
+colnames(valid.df)[57] <- "cylinders4cylinders"
+colnames(valid.df)[58] <- "cylinders5cylinders"
+colnames(valid.df)[59] <- "cylinders6cylinders"
+colnames(valid.df)[60] <- "cylinders8cylinders"
+colnames(valid.df)[61] <- "cylindersNotDocumented"
+colnames(valid.df)[68] <- "titlestatusclean"
+colnames(valid.df)[69] <- "titlestatuslien"          
+colnames(valid.df)[70] <- "titlestatusmissing"                
+colnames(valid.df)[71] <- "titlestatuspartsonly"
+colnames(valid.df)[72] <- "titlestatusrebuilt"     
+colnames(valid.df)[73] <- "titlestatussalvage"      
+colnames(valid.df)[79] <- "driveNotDocumented"
+colnames(valid.df)[82] <- "sizefullsize"
+colnames(valid.df)[83] <- "sizemidsize"
+colnames(valid.df)[84] <- "sizeNotDocumented"
+colnames(valid.df)[85] <- "sizesubcompact"
+colnames(valid.df)[90] <- "typeminivan"
+colnames(valid.df)[91] <- "typeNotDocumented"
+colnames(valid.df)[100] <- "paintcolorblack"
+colnames(valid.df)[101] <- "paintcolorblue"
+colnames(valid.df)[102] <- "paintcolorbrown"
+colnames(valid.df)[103] <- "paintcolorcustom"
+colnames(valid.df)[104] <- "paintcolorgreen"
+colnames(valid.df)[105] <- "paintcolorgrey"
+colnames(valid.df)[106] <- "paintcolorNotDocumented"
+colnames(valid.df)[107] <- "paintcolororange"
+colnames(valid.df)[108] <- "paintcolorpurple"
+colnames(valid.df)[109] <- "paintcolorred"
+colnames(valid.df)[110] <- "paintcolorwhite"
+colnames(valid.df)[111] <- "paintcoloryellow"
+
+```
+
+```{r}
+#Regression tree
+library(rpart)
+library(rpart.plot)
+
+rt <- rpart(price~.,data=data_final,method="anova")
+prp(rt,type=1,extra=1,under=TRUE,split.font=1,varlen=-10)
+```
+
+```{r}
+#Quelques métriques sur l'arbre de régression
+printcp(rt) 
+plotcp(rt) 
+summary(rt) 
+
+ # create additional plots
+par(mfrow=c(1,2)) # two plots on one page
+rsq.rpart(rt) # visualize cross-validation results  
+```
+
+
+
+```{r}
+#Random forest
+library(randomForest)
+rf <- randomForest(price~.,data=data_final,ntree=100,mtry=4,nodesize=5,importance=TRUE)
+varImpPlot(rf,type=1)
+rf.pred <- predict(rf, valid.df)
+```
+

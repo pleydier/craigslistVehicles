@@ -171,9 +171,11 @@ points(nums$long, nums$lat, col = "red", cex = .6)
 #
 
 #peut prendre un peu de temps
-col_names= colnames(quali)
-for (x in seq(1, length(quali)))
-  bar_freq(quali, col_names[x], x)
+#####################################
+#col_names= colnames(quali)
+#for (x in seq(1, length(quali)))
+#  bar_freq(quali, col_names[x], x)
+#####################################
 
 #variable condition a beaucoup de nan ==> remplacé par non-rensigné ? ou supprimer ?
 
@@ -211,7 +213,8 @@ data_new= copy(data)
 ######### Par observation #########
 table(naind)
 dim(data_new) # 525 839 observations
-data_new = data_new[naind < 10] # Drop ceux qui ont trop de NA
+#data_new = data_new[naind < 10] # Drop ceux qui ont trop de NA
+data_new= data_new[-which(rowMeans(is.na(data_new)) > 0.4), ]
 dim(data_new) # 525 606 observations, soit 233 drops
 
 retraitement= function(x) {
@@ -401,10 +404,9 @@ rm(data_merge)
 #
 #suppression doublons
 #
-dim(data_abe)
-data_abe= data_abe[!duplicated(data_abe)]
-dim(data_abe)
-
+dim(data_abe) #469166 lignes
+data_abe= data_abe[!duplicated(data_abe), ]
+dim(data_abe)# 414822 lignes restantes
 
 #
 #on va plot nos coordonnées pour voir
@@ -479,8 +481,8 @@ data_merge_localisation= dist.merge(data_general_localisation
 data_merge_localisation= data_merge_localisation %>% 
   dplyr::rename(city_neighbour= City, city= Group.1)
 
-write.csv(data_merge_localisation
-          , file = "data_merge_localisation.csv")
+#write.csv(data_merge_localisation
+#          , file = "data_merge_localisation.csv")
 
 
 
@@ -489,8 +491,8 @@ write.csv(data_merge_localisation
 ##################################################################################
 
 #DATASET FINAL A RECUPERER !!!!!!!!!!!!!!!! #
-write.csv(data_abe
-          , file = "data_abe.csv")
+#write.csv(data_abe
+#          , file = "data_abe.csv")
 
 
 
