@@ -4,7 +4,7 @@
 En collaboration avec:
  - [Paul Leydier](https://github.com/pleydier) 
  - [Wenceslas Sanchez](https://github.com/Orlogskapten)
- - Donovan Thaing
+ - [Donovan Thaing](https://github.com/Skydono)
  ----
 ## Présentation
 Le but de ce projet est d'appliquer nos connaissances en dataming (avec R) et en Dataviz' pour analyser et construire une problématique autour d'un dataset de [Kaggle](https://www.kaggle.com/austinreese/craigslist-carstrucks-data).
